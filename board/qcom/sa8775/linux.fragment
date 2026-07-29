@@ -6,20 +6,43 @@
 # defconfig ever reintroducing it).
 CONFIG_INITRAMFS_SOURCE=""
 
-# QEMU's "virt" hexagon machine registers the PL011 UART as ttyAMA1 (not
-# ttyAMA0, as the kernel's own qemu_defconfig / embedded sm8150 DTS assume),
-# so override the console= kernel argument to match reality; otherwise the
-# kernel never attaches an initial console and userspace never gets a tty.
+# Console: the Qualcomm QUP/GENI serial engine, not the PL011.
+#
+# QEMU's "virt" hexagon machine emits a GENI serial engine (compatible
+# "qcom,geni-debug-uart") under a QUP wrapper node, and makes it
+# /aliases/serial0 + /chosen/stdout-path; the PL011 is /aliases/serial1.
+# qcom_geni_serial names its console ports "ttyMSM<of_alias_get_id(serial)>",
+# so the GENI UART is ttyMSM0 (the PL011 is ttyAMA1 -- ttyAMA*1*, not
+# ttyAMA0, precisely because of that serial1 alias).
+#
+# Deliberately no "earlycon": it would resolve from /chosen/stdout-path onto
+# this same GENI UART (OF_EARLYCON_DECLARE(qcom_geni, "qcom,geni-debug-uart")),
+# but hexagon's fixmap support is not far enough along to carry
+# FIX_EARLYCON_MEM_BASE through boot -- see ./qup_uart_console.md. Nothing is
+# actually lost: the angel semihosting bootconsole (angel0) already covers the
+# window before ttyMSM0 registers at ~2.2s, and printk replays the ring buffer
+# onto ttyMSM0 at handover.
 #
 # root=/dev/vda mounts the persistent virtio-blk ext2 disk directly as root;
 # rootwait blocks boot until the virtio-blk driver probes the device instead
 # of panicking with "VFS: Unable to mount root fs".
-CONFIG_CMDLINE="console=ttyAMA1 debug mem=892M lpj=89124080 root=/dev/vda rw rootwait"
+CONFIG_CMDLINE="console=ttyMSM0 debug mem=892M lpj=89124080 root=/dev/vda rw rootwait"
+
+# The QUP/GENI console stack. The kernel's own hexagon qemu_defconfig already
+# turns these on, but pin them here so the console= above cannot be silently
+# left without a driver if that defconfig changes. QCOM_GENI_SE drives the QUP
+# wrapper (the DT parent) and SERIAL_QCOM_GENI[_CONSOLE] the serial engine
+# itself; both are reachable on hexagon because CONFIG_ARCH_QCOM=y.
+CONFIG_QCOM_GENI_SE=y
+CONFIG_SERIAL_QCOM_GENI=y
+CONFIG_SERIAL_QCOM_GENI_CONSOLE=y
 
 # Enable the common clock framework so the DT "apb-pclk" fixed-clock node --
 # which QEMU's virt machine emits as the PL011's "apb_pclk"/"uartclk" supplier
 # (clocks = <&apb-pclk>), exactly like the arm64 virt machine does -- actually
 # gets a driver (of_fixed_clk_setup) that binds it and registers the clock.
+# The GENI UART hangs off the same fixed clock (its "se" clock), so this is
+# now a prerequisite for the console above, not just for the PL011.
 #
 # Without COMMON_CLK there is no fixed-rate clock driver, so that platform
 # device sits permanently unbound (DL_DEV_NO_DRIVER). fw_devlink then blocks
