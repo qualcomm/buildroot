@@ -1,0 +1,21 @@
+# The recovery image only needs a shell.  Exclude account-management and
+# login applets: they are unused without persistent account data and exceed
+# the external toolchain's GP-relative relocation range in a static BusyBox.
+# CONFIG_ADDGROUP is not set
+# CONFIG_ADDUSER is not set
+# CONFIG_GETTY is not set
+# CONFIG_LOGIN is not set
+# CONFIG_MKPASSWD is not set
+# CONFIG_PASSWD is not set
+# CONFIG_SU is not set
+# CONFIG_SULOGIN is not set
+# CONFIG_DELUSER is not set
+# CONFIG_DELGROUP is not set
+# CONFIG_VLOCK is not set
+# CONFIG_BC is not set
+# CONFIG_DC is not set
+# CONFIG_CRONTAB is not set
+
+# Keep recovery-shell-only flags out of kernel compilation.
+CONFIG_EXTRA_CFLAGS="-fno-pie -G0"
+CONFIG_EXTRA_LDFLAGS="-no-pie"
