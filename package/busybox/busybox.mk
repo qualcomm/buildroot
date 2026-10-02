@@ -24,6 +24,16 @@ BUSYBOX_IGNORE_CVES += CVE-2025-60876
 BUSYBOX_CFLAGS = \
 	$(TARGET_CFLAGS)
 
+# Hexagon: BusyBox declares its "ptr_to_globals" pointers (ash_ptr_to_globals_*,
+# ...) as extern const in the readers and assigns them through a cast in an
+# out-of-line helper.  Clang may then treat the load as invariant and put it in
+# the same VLIW packet as the assigning call, where it executes first and reads
+# NULL, so every `sh` segfaults in ash_main.  BusyBox documents this switch for
+# toolchains that break on the trick.
+ifeq ($(BR2_hexagon),y)
+BUSYBOX_CFLAGS += -DBB_GLOBAL_CONST=
+endif
+
 BUSYBOX_LDFLAGS = \
 	$(TARGET_LDFLAGS)
 
