@@ -1,0 +1,7 @@
+::sysinit:/bin/mount -t proc proc /proc
+::sysinit:/bin/mkdir -p /dev/pts /dev/shm /run/lock/subsys
+::sysinit:/bin/hostname -F /etc/hostname
+::sysinit:/etc/init.d/rcS
+# A shell on the console, if there is one (QEMU's PL011); waits for Enter.
+console::askfirst:-/bin/sh
+::shutdown:/etc/init.d/rcK

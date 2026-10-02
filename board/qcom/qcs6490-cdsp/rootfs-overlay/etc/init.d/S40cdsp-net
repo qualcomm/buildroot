@@ -1,0 +1,17 @@
+#!/bin/sh
+# IP over the GLINK IP bridge: the netdev is dspN; APPS is 10.42.0.1.
+# Done in the background: the netdev appears only once the APPS side attaches.
+case "$1" in
+start)
+	(
+		for i in $(seq 1 600); do
+			[ -d /sys/class/net/dsp0 ] && break
+			sleep 1
+		done
+		ip link set lo up 2>/dev/null
+		ip addr replace 10.42.0.2 peer 10.42.0.1 dev dsp0 2>/dev/null
+		ip link set dsp0 up 2>/dev/null
+		echo "cdsp-net: dsp0 10.42.0.2 <-> 10.42.0.1" > /dev/kmsg
+	) &
+	;;
+esac

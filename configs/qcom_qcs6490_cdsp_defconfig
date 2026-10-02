@@ -1,11 +1,20 @@
 # QCS6490 CDSP (Rubik Pi 3).
 #
+# The initramfs has a BusyBox shell and a dropbear SSH server reachable over the
+# GLINK IP link (dsp0 = 10.42.0.2, the APPS side is 10.42.0.1; root password
+# "root").  The board has no serial console, so that ssh session is the console.
+#
 # The root filesystem is an external, gzip-compressed cpio archive.  Keeping
 # it separate from vmlinux leaves platform bootloader and image-packaging
 # integration outside Buildroot's scope.
 BR2_hexagon=y
 BR2_HEXAGON_v68=y
 BR2_STATIC_LIBS=y
+# -O1: clang-23 -O2 miscompiles Hexagon code (dropbear's crypto).
+BR2_OPTIMIZE_1=y
+# No dynamic loader in the initramfs: static, non-PIE everywhere (dropbear too).
+BR2_TARGET_OPTIMIZATION="-fno-pie -G0"
+BR2_TARGET_LDFLAGS="-static -no-pie"
 BR2_TOOLCHAIN_EXTERNAL=y
 BR2_TOOLCHAIN_EXTERNAL_CUSTOM=y
 BR2_TOOLCHAIN_EXTERNAL_CLANG=y
@@ -27,8 +36,10 @@ BR2_ROOTFS_DEVICE_CREATION_STATIC=y
 BR2_ROOTFS_OVERLAY="board/qcom/qcs6490-cdsp/rootfs-overlay"
 BR2_ROOTFS_POST_IMAGE_SCRIPT="board/qcom/qcs6490-cdsp/post-image.sh"
 
-# A static BusyBox shell is all the recovery/initramfs needs.  Do not add the
-# large development and network package set used by the QEMU CDSP image.
+# A static BusyBox shell plus dropbear is all the initramfs needs.  Do not add
+# the large development and network package set used by the QEMU CDSP image.
+BR2_TARGET_GENERIC_ROOT_PASSWD="root"
+BR2_PACKAGE_DROPBEAR=y
 BR2_PACKAGE_BUSYBOX_SHOW_OTHERS=y
 BR2_PACKAGE_BUSYBOX_CONFIG_FRAGMENT_FILES="board/qcom/qcs6490-cdsp/busybox.fragment"
 BR2_TARGET_ROOTFS_CPIO=y
